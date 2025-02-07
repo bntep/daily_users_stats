@@ -1,0 +1,25 @@
+**/*.venv
+**/*__pycache__*
+**/*.secrets
+# **/*.vscode
+**/*.hypothesis
+**/*venv
+**/*env.py
+**/*secrets.*
+**/*.secrets
+**/*logs
+**/*results
+**/*obsolete
+**/*data
+**/*__pycache__
+**/*.pytest_cache
+**/*draft_*
+**/*.tok
+*.tok
+**/*.db
+**/*.log
+**/eurofidai_api/*dist*
+**/eurofidai_api/*eurofidai_api.egg-info*
+**/src/config/env_sftp.py
+**/fields.csv
+src/.setup/config/env_sftp.py
