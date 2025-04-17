@@ -99,15 +99,12 @@ def create_statistique_requete(condition_year: str, type_data: str , condition_l
     WHEN nom_base_interrogee LIKE '%indices_eurofidai%' THEN 'Eurofidai Indices' \
     WHEN nom_base_interrogee LIKE '%histo_indices_eurofidai%' THEN 'IEurofidai Indices' \
     WHEN nom_base_interrogee LIKE '%corres_code%' THEN 'Code Mapping Table' \
-    WHEN nom_base_interrogee LIKE '%fonds_mutuel_cote%' THEN 'Mutual Funds' \
-    WHEN nom_base_interrogee LIKE '%fonds_mutuel_valeur%' THEN 'Mutual Funds' \
-    WHEN nom_base_interrogee LIKE '%fonds_mutuel_code%' THEN 'Mutual Funds' \
-    WHEN nom_base_interrogee LIKE '%fonds_mutuel_infos_comp' THEN 'Mutual Funds ' \
-    WHEN nom_base_interrogee LIKE '%fonds_mutuel_cote_infos_comp' THEN 'Mutual Funds' \
+    WHEN nom_base_interrogee LIKE '%fonds_mutuel_%' THEN 'Mutual Funds' \
     WHEN nom_base_interrogee LIKE '%change%' THEN 'Spot Exchange Rate' \
     WHEN nom_base_interrogee LIKE '%histo_ost%' THEN 'Corporate Events' \
     WHEN nom_base_interrogee LIKE 'ost%' THEN 'Corporate Events' \
     WHEN nom_base_interrogee LIKE '%esg%' THEN 'ESG' \
+    WHEN nom_base_interrogee LIKE '%greenbonds%' THEN 'Green Bonds' \
     END as database_name2, \
     CASE \
     WHEN nom_base_interrogee LIKE '%histo%' THEN 'Search_Code' \
