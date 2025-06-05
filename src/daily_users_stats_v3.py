@@ -4,7 +4,8 @@ Description:
 This script creates statistics for daily users database
 PARAM:  -y or --year : a year or a list of year
         -l or --labo : the name of the laboratory
-python3 -y 2023,2024 -l 'IAE Lille"
+python3 -y 2023,2024 -l 'IAE Lille src/daily_users_stats_v3.py
+python3  src/daily_users_stats_v3.py"
 """
 
 import os
@@ -26,9 +27,7 @@ os.environ[ 'MPLCONFIGDIR' ] = '/tmp/'
 
 # Path Definitions
 #HOME = Path(__file__).parent.parent
-#HOME = Path("/mnt/west/eurofidai-gre/Laura")
 HOME = Path("/home/groups/daily/travail/Laura/")
-#HOME = Path("/mnt/west/groups/bdd-temp/Laura")
 CHEMIN_RESULTAT = Path(HOME, "drupal_stats_daily_users")
 CHEMIN_RESULTAT.mkdir(parents=True, exist_ok=True)
 
@@ -53,6 +52,8 @@ def create_institution_folder(df_labo: pd.DataFrame):
 
 
 def get_multiple_locator(number: int) -> int:
+    """ This function returns the multiple locator for the y-axis based on the number of digits in the number.
+    For example, if the number is 1250, it returns 1000, if the number is 158, it returns 100, and so on."""
     magnitude = 0
     n = number
     multiple = {}
@@ -99,15 +100,12 @@ def create_statistique_requete(condition_year: str, type_data: str , condition_l
     WHEN nom_base_interrogee LIKE '%indices_eurofidai%' THEN 'Eurofidai Indices' \
     WHEN nom_base_interrogee LIKE '%histo_indices_eurofidai%' THEN 'IEurofidai Indices' \
     WHEN nom_base_interrogee LIKE '%corres_code%' THEN 'Code Mapping Table' \
-    WHEN nom_base_interrogee LIKE '%fonds_mutuel_cote%' THEN 'Mutual Funds' \
-    WHEN nom_base_interrogee LIKE '%fonds_mutuel_valeur%' THEN 'Mutual Funds' \
-    WHEN nom_base_interrogee LIKE '%fonds_mutuel_code%' THEN 'Mutual Funds' \
-    WHEN nom_base_interrogee LIKE '%fonds_mutuel_infos_comp' THEN 'Mutual Funds ' \
-    WHEN nom_base_interrogee LIKE '%fonds_mutuel_cote_infos_comp' THEN 'Mutual Funds' \
+    WHEN nom_base_interrogee LIKE '%fonds_mutuel_%' THEN 'Mutual Funds' \
     WHEN nom_base_interrogee LIKE '%change%' THEN 'Spot Exchange Rate' \
     WHEN nom_base_interrogee LIKE '%histo_ost%' THEN 'Corporate Events' \
     WHEN nom_base_interrogee LIKE 'ost%' THEN 'Corporate Events' \
     WHEN nom_base_interrogee LIKE '%esg%' THEN 'ESG' \
+    WHEN nom_base_interrogee LIKE '%greenbonds%' THEN 'Green Bonds' \
     END as database_name2, \
     CASE \
     WHEN nom_base_interrogee LIKE '%histo%' THEN 'Search_Code' \
@@ -314,7 +312,23 @@ def create_seaborn_relplot(df: pd.DataFrame, x_var: str, y_var: str, kind: str =
 
 
 def create_and_save_graph(df_labo: pd.DataFrame, df_user: pd.DataFrame, df_db: pd.DataFrame, years: int, labo: str):  
-            
+
+    """This function creates and saves graphs for a specific laboratory and year(s).
+       It generates three types of graphs: 
+    # 1. Number of extracted Eurofidai codes per month for the laboratory
+    # 2. Number of users per month for the laboratory
+    # 3. Number of extracted Eurofidai codes per database for the laboratory
+    #  The graphs are saved in the laboratory's folder in the result directory.
+    # Args:
+    #   df_labo (pd.DataFrame): DataFrame containing laboratory data.
+    #   df_user (pd.DataFrame): DataFrame containing user data.
+    #   df_db (pd.DataFrame): DataFrame containing database data.
+    #   years (int or list): Year or list of years for which to create graphs.
+    #   labo (str): Name of the laboratory for which to create graphs.
+    # Returns:
+    #   None
+    """
+
     if isinstance(years, int): 
         # graphics Laboratories 
         df_labo_year =  df_labo[(df_labo['institution_name'] == labo) & (df_labo['year'] == int(years))]
