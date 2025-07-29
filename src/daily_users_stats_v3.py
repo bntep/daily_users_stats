@@ -113,8 +113,8 @@ def create_statistique_requete(condition_year: str, type_data: str , condition_l
     END AS code_ou_data \
     FROM statistique_requete as sr LEFT JOIN institution_entity as node \
     ON sr.id_groupe_labo=node.id \
-    WHERE {condition_year} AND  nom_groupe_labo NOT IN ('EUROFIDAI','administrateur Drupal') \
-    AND id_utilisateur_drupal NOT IN (1178,1922,367) {condition_labo} \
+    WHERE {condition_year} AND  nom_groupe_labo NOT IN ('EUROFIDAI','administrateur Drupal') AND  nom_groupe_labo IS NOT NULL\
+    AND id_utilisateur_drupal NOT IN (1178,1922,367,274) {condition_labo} \
     ORDER BY year,month,date_heure_extraction,id_utilisateur_drupal,node.name \
     ;"
 
@@ -125,17 +125,27 @@ def create_statistique_requete(condition_year: str, type_data: str , condition_l
             LEFT OUTER JOIN user__field_institution AS ufi ON ufi.entity_id=ufd.uid \
             LEFT OUTER JOIN institution_entity AS ie ON ie.id=field_institution_target_id \
             FULL OUTER JOIN user__field_statut AS ufs  ON ufd.uid =ufs.entity_id \
-            WHERE ufd.uid NOT IN (1178,1922,367) AND ie.name NOT IN ('EUROFIDAI','administrateur Drupal')  \
-            ORDER BY  ie.name,  id_user ;"
+            WHERE ufd.uid NOT IN (1178,1922,367,274) AND ie.name NOT IN ('EUROFIDAI','administrateur Drupal', 'probesys2 probesys') AND ie.name IS NOT NULL \
+             ORDER BY  ie.name, ufd.uid ;"
 
     df_stats_daily_users = DbConnector('yakari', echo=True).execute_query(req_extraction_stats)
     df_stats_daily_subscription = DbConnector('yakari', echo=True).execute_query(req_extraction_stats_users)
+    df_stats_users_with_subscription = df_stats_daily_users.merge(df_stats_daily_subscription, how='left', left_on='id_user', right_on='id_user')
+    df_stats_users_with_subscription = df_stats_users_with_subscription[df_stats_users_with_subscription['labo_name'].isnull() == False].drop_duplicates()
+    df_stats_users_with_subscription = df_stats_users_with_subscription.drop(columns=['institution_name'])
+    df_stats_users_with_subscription = df_stats_users_with_subscription.sort_values(by=['labo_name', 'id_user'])
 
     df_stats_daily_subscription['date_created'] = pd.to_datetime(df_stats_daily_subscription['date_created'], format='%Y-%m-%d')
     df_stats_daily_subscription['date_create_year'] = df_stats_daily_subscription['date_created'].dt.year
     df_stats_daily_subscription['date_last_access'] = pd.to_datetime(df_stats_daily_subscription['date_last_access'], format='%Y-%m-%d')
     df_stats_daily_subscription['date_last_access_year'] = df_stats_daily_subscription['date_last_access'].dt.year
-    df_stats_daily_subscription.to_csv(str(CHEMIN_RESULTAT / "raw_data_stats_daily_subscription.csv"), index=False, encoding='utf-8')
+
+    df_stats_users_with_subscription['date_created'] = pd.to_datetime(df_stats_users_with_subscription['date_created'], format='%Y-%m-%d')
+    df_stats_users_with_subscription['date_create_year'] = df_stats_users_with_subscription['date_created'].dt.year
+    df_stats_users_with_subscription['date_last_access'] = pd.to_datetime(df_stats_users_with_subscription['date_last_access'], format='%Y-%m-%d')
+    df_stats_users_with_subscription['date_last_access_year'] = df_stats_users_with_subscription['date_last_access'].dt.year
+    df_stats_daily_subscription.to_csv(str(CHEMIN_RESULTAT / "raw_data_stats_daily_subscription.csv"), index=False, encoding='utf-8',  sep='|')
+    df_stats_users_with_subscription.to_csv(str(CHEMIN_RESULTAT / "raw_data_stats_daily_users_with_subscription.csv"), index=False, encoding='utf-8',  sep='|')
 
     # Total number of subscribers per labo
     df_stats_number_of_all_subscribers_per_labo = df_stats_daily_subscription.groupby(['labo_name','statut']).size().reset_index(name='nb_subscribers')
@@ -167,7 +177,7 @@ def create_statistique_requete(condition_year: str, type_data: str , condition_l
     # Extract formatted month names
     df_stats_daily_users['month_name'] = df_stats_daily_users['date'].dt.strftime('%b%y')  # %b for abbreviated month names (Jan, Feb...)
    
-    df_stats_daily_users.to_csv(str(CHEMIN_RESULTAT / "raw_data_stats_daily_users.csv"), index=False, encoding='utf-8')
+    df_stats_daily_users.to_csv(str(CHEMIN_RESULTAT / "raw_data_stats_daily_users.csv"), index=False, encoding='utf-8', sep='|')
 
     #stats for all laboratories
     df_all_laboratories = df_stats_daily_users[['year','month','month2','date','month_name','nb_codes','institution_name','user_name']].drop_duplicates(subset=['institution_name','user_name','year','month','month2']).groupby(['year','month','month2']).size().reset_index(name='nb_users')
