@@ -23,3 +23,6 @@
 **/src/config/env_sftp.py
 **/fields.csv
 src/.setup/config/env_sftp.py
+input_csv/
+resultat/
+src/archives/

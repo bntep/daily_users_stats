@@ -15,6 +15,9 @@ import argparse
 from pathlib import Path
 import seaborn as sns
 import matplotlib.pyplot as plt
+from pptx import Presentation
+from pptx.util import Pt
+
 
 # rajouter dans la variable d'environnement PATH contenant la liste des répertoires systèmes (programme python, librairies, ...)
 # c'est très important quand on crée un package, de rajouter ce répertoire dans PATH
@@ -28,8 +31,10 @@ os.environ[ 'MPLCONFIGDIR' ] = '/tmp/'
 # Path Definitions
 #HOME = Path(__file__).parent.parent
 HOME = Path("/home/groups/daily/travail/Laura/")
+WORKDIR = Path("/home/groups/daily/travail/Bertrand/Developpement/daily_users_stats")
 CHEMIN_RESULTAT = Path(HOME, "drupal_stats_daily_users")
 CHEMIN_RESULTAT.mkdir(parents=True, exist_ok=True)
+CHEMIN_INPUT_CSV = Path(WORKDIR, "input_csv")
 
 
 parser = argparse.ArgumentParser(description="This script creates statistics for daily users database. \n \
@@ -145,23 +150,27 @@ def create_statistique_requete(condition_year: str, type_data: str , condition_l
     df_stats_users_with_subscription['date_last_access'] = pd.to_datetime(df_stats_users_with_subscription['date_last_access'], format='%Y-%m-%d')
     df_stats_users_with_subscription['date_last_access_year'] = df_stats_users_with_subscription['date_last_access'].dt.year
     df_stats_daily_subscription.to_csv(str(CHEMIN_RESULTAT / "raw_data_stats_daily_subscription.csv"), index=False, encoding='utf-8',  sep='|')
-    df_stats_users_with_subscription.to_csv(str(CHEMIN_RESULTAT / "raw_data_stats_daily_users_with_subscription.csv"), index=False, encoding='utf-8',  sep='|')
+    df_stats_users_with_subscription.to_csv(str(CHEMIN_RESULTAT / "stats_all_users_with_subscription_informations.csv"), index=False, encoding='utf-8',  sep='|')
+    df_stats_users_with_subscription.to_csv(str(CHEMIN_INPUT_CSV / "stats_all_users_with_subscription_informations.csv"), index=False, encoding='utf-8',  sep='|')
 
     # Total number of subscribers per labo
     df_stats_number_of_all_subscribers_per_labo = df_stats_daily_subscription.groupby(['labo_name','statut']).size().reset_index(name='nb_subscribers')
     df_stats_number_of_all_subscribers_per_labo.sort_values(by=['labo_name','statut'],inplace=True)
-    df_stats_number_of_all_subscribers_per_labo.to_csv(str(CHEMIN_RESULTAT / "raw_data_stats_number_of_all_subscribers_per_labo.csv"), index=False, encoding='utf-8', sep='|')
+    df_stats_number_of_all_subscribers_per_labo.to_csv(str(CHEMIN_RESULTAT / "stats_number_of_subscribers_per_labo_and_status.csv"), index=False, encoding='utf-8', sep='|')
+    df_stats_number_of_all_subscribers_per_labo.to_csv(str(CHEMIN_INPUT_CSV / "stats_number_of_subscribers_per_labo_and_status.csv"), index=False, encoding='utf-8', sep='|')
     
     # Total number of subscribers per year_created
     df_stats_number_of_subscribers_created = df_stats_daily_subscription.groupby(['labo_name','statut', 'date_create_year']).size().reset_index(name='nb_subscribers')
     df_stats_number_of_subscribers_created.sort_values(by=['labo_name','date_create_year','statut'],inplace=True)
-    df_stats_number_of_subscribers_created.to_csv(str(CHEMIN_RESULTAT / "raw_data_stats_number_of_subscribers_per_year_created.csv"), index=False, encoding='utf-8', sep='|')
+    df_stats_number_of_subscribers_created.to_csv(str(CHEMIN_RESULTAT / "stats_number_of_subscribers_per_status_and_year_creation.csv"), index=False, encoding='utf-8', sep='|')
+    df_stats_number_of_subscribers_created.to_csv(str(CHEMIN_INPUT_CSV / "stats_number_of_subscribers_per_status_and_year_creation.csv"), index=False, encoding='utf-8', sep='|')
 
     # Total number of subscribers per year_last_access
     df_stats_number_of_subscribers_last_access = df_stats_daily_subscription.groupby(['labo_name','statut', 'date_last_access_year']).size().reset_index(name='nb_subscribers')
     df_stats_number_of_subscribers_last_access.sort_values(by=['labo_name','date_last_access_year','statut'],inplace=True)
-    df_stats_number_of_subscribers_last_access.to_csv(str(CHEMIN_RESULTAT / "raw_data_stats_number_of_subscribers_last_access.csv"), index=False, encoding='utf-8', sep='|') 
-
+    df_stats_number_of_subscribers_last_access.to_csv(str(CHEMIN_RESULTAT / "stats_number_of_subscribers_per_status_and_year_last_access.csv"), index=False, encoding='utf-8', sep='|') 
+    df_stats_number_of_subscribers_last_access.to_csv(str(CHEMIN_INPUT_CSV / "stats_number_of_subscribers_per_status_and_year_last_access.csv"), index=False, encoding='utf-8', sep='|') 
+    
 
     df_stats_daily_users['year'] = df_stats_daily_users['year'].astype(int)
     df_stats_daily_users['month'] = df_stats_daily_users['month'].astype(int)
@@ -378,6 +387,154 @@ def create_and_save_graph(df_labo: pd.DataFrame, df_user: pd.DataFrame, df_db: p
                 create_graph( df_db_year, labo_name=labo, year=year, x_var='database_name2', y_var='nb_codes', \
             color='deeppink', legend_title ="Number of extracted Eurofidai codes", xlabel="Database", ylabel ="Number of codes" , title=f'{labo}_database_{year}', save=True)                   
             
+#supprime les caractères et les espaces inattendus et met en minuscules tous les noms d'institutions
+def normalize(institution):
+    return str(institution).strip().lower()
+    
+def extract_data(folder_path, institution_list):
+
+    select_csv_columns = {        
+        #'raw_data_stats_daily_subscription.csv': ['id_user', 'labo_name', 'statut', 'date_create_year', 'date_last_access_year'],  # type: ignore
+        'stats_all_users_with_subscription_informations.csv': ['id_user', 'user_name', 'labo_name', 'statut', 'date_last_access', 'date_created'] # type: ignore
+        }
+    
+
+    #creates institution dictionary
+    #crée un dictionnaire institutionnel
+    institution_data = {}
+
+    for file in os.listdir(folder_path):
+        if file.endswith(".csv"):
+            try:
+                #reads csv files and formats to ensure path works across many operating systems
+                #lit les fichiers et formats CSV pour garantir que le chemin fonctionne sur de nombreux systèmes d'exploitation
+                df = pd.read_csv(os.path.join(folder_path, file), delimiter = "|")
+                
+                
+                # Normalizes institution names to handle case insensitivity and unnecessary characters
+                normalized_institution_list = []
+                normalized_institution_list = [normalize(inst) for inst in institution_list]
+                
+                #creates new institution list that ignores capitalization and unnecessary characters
+                #crée une nouvelle liste d'institutions qui ignore les majuscules et les caractères inutiles
+                institution_list = normalized_institution_list
+
+                #finds if any part of each row contains an institution
+                #détermine si une partie de chaque ligne contient une institution
+                match_institution = df.apply(lambda row: any(any(normalized_name in normalize(cell)for normalized_name in normalized_institution_list)for cell in row),axis=1)
+
+                #filters dataframe to include only rows where match_institution is True
+                #filtre le dataframe pour inclure uniquement les lignes où match_institution est True
+                if not match_institution.any():
+                    continue
+                filtered_df = df[match_institution]
+
+                # If custom columns are defined for this file, use only those columns (if they exist in the DataFrame)
+                if file in select_csv_columns:
+                    columns_to_keep = [col for col in select_csv_columns[file] if col in filtered_df.columns]
+                    filtered_df = filtered_df[columns_to_keep]
+                    filtered_df.drop_duplicates(inplace=True)
+                    filtered_df.reset_index(drop=True, inplace=True)
+
+                for institution in institution_list:
+                    #filters only the rows that contain the current institution
+                    #filtre uniquement les lignes qui contiennent l'institution actuelle
+                    institution_rows = filtered_df[filtered_df.apply(lambda row: any(institution in normalize(str(cell)) for cell in row), axis=1)].copy()
+
+                    # Attempt to convert year-like float values to integers (e.g., 2022.0 -> 2022)
+                    # Essaie de convertir les valeurs de type float en années en entiers (par exemple, 2022.0 -> 2022)
+                    for col in institution_rows.columns:
+                        if institution_rows[col].dtype == 'float64':
+                            # Only convert if all values are integers in float form
+                            if institution_rows[col].dropna().apply(float.is_integer).all():
+                                institution_rows[col] = institution_rows[col].astype('Int64')
+
+                    #skip institution if not in file
+                    #ignorer l'établissement s'il n'est pas dans le fichier
+                    if not institution_rows.empty:
+                        
+                        #creates new list to store this institutions data if it does not alredy exist in institution_data dictionary
+                        #crée une nouvelle liste pour stocker les données de cette institution si elles n'existent pas déjà dans le dictionnaire de données de l'institution
+                        if institution not in institution_data:
+                            institution_data[institution] = []
+        
+                        institution_data[institution].append({
+                            "file": file,
+                            "columns": institution_rows.columns.tolist(),
+                            "data": institution_rows
+                        })
+
+                        # drop duplicates and reset index for the last entry in the institution_data list
+                        # This ensures that each institution's data is unique and properly indexed  
+                        institution_data[institution][-1]["data"].drop_duplicates(inplace=True)
+                        institution_data[institution][-1]["data"].reset_index(drop=True, inplace=True)
+
+            except Exception as e:
+                # Handle exceptions for individual files, but continue processing others        
+                print(f"Error processing {file}: {e}")
+    return institution_data
+
+def chunk_data_rows(rows, chunk_size):
+    """Yield successive chunks from list of rows."""
+    for i in range(0, len(rows), chunk_size):
+        yield rows[i:i + chunk_size]
+
+def create_institutional_pptx(institution_data, presentation, max_rows_per_slide=10):
+    replace_existing = True  # or False based on user input
+
+    if replace_existing or not os.path.exists(presentation):
+        prs = Presentation()  # start fresh
+    else:
+        prs = Presentation(presentation)  # load and append
+
+    for institution, blocks in institution_data.items():
+        for data in blocks:
+            full_rows = data["data"].to_dict(orient="records")
+            row_chunks = list(chunk_data_rows(full_rows, max_rows_per_slide))
+            
+            for idx, chunk in enumerate(row_chunks):
+                slide = prs.slides.add_slide(prs.slide_layouts[1])
+                title_shape = slide.shapes.title
+                # define the text title policy
+                
+                slide.shapes.title.text = f"{institution} ({idx + 1}/{len(row_chunks)})"
+                title_font = title_shape.text_frame.paragraphs[0].font
+                title_font.name = 'Calibri'
+                title_font.size = Pt(24)
+                title_font.bold = True
+                textbox = slide.placeholders[1]               
+                tf = textbox.text_frame               
+                tf.clear()
+
+                # File name header
+                p = tf.paragraphs[0]
+                p.text = f"{data['file']}"
+                p.font.bold = True
+                p.font.size = Pt(16)
+                p.font.name = 'Bodoni MT Condensed'
+
+                # Column headers
+                header_p = tf.add_paragraph()
+                header_p.text = " | ".join(data["columns"])
+                header_p.font.bold = True
+                header_p.font.size = Pt(12)
+                header_p.font.name = 'Bodoni MT Condensed'
+                header_p.level = 1
+
+                # Add each row as values only, with statut if file is 'raw_data_stats_daily_users.csv'
+                for row_data in chunk:
+                    values = " | ".join([str(row_data[col]) for col in data["columns"]])
+                    p = tf.add_paragraph()
+                    p.text = values
+                    p.font.size = Pt(12)
+                    p.font.name = 'Bodoni MT Condensed'
+                    p.level = 1
+
+
+    prs.save(presentation)
+    return presentation
+
+
 
 def main():
 
@@ -415,6 +572,11 @@ def main():
                     
         create_and_save_graph(df_labo, df_user, df_db, years, labo)
 
+        institution_list = [normalize(labo)]
+        institution_data = extract_data(CHEMIN_INPUT_CSV, institution_list)
+        output_pptx= Path(CHEMIN_RESULTAT, labo, f"{labo}_stats.pptx")
+        create_institutional_pptx(institution_data, presentation=output_pptx)
+
     else:
         condition_labo = ""
         df_labo = create_statistique_requete(condition_year, type_data='laboratory', condition_labo=condition_labo)
@@ -429,6 +591,10 @@ def main():
         
         for labo in df_labo['institution_name'].unique():
             create_and_save_graph(df_labo, df_user, df_db, years, labo)
+            institution_list = [normalize(labo)]
+            institution_data = extract_data(CHEMIN_INPUT_CSV, institution_list)
+            output_pptx= Path(CHEMIN_RESULTAT, labo, f"{labo}_stats.pptx")
+            create_institutional_pptx(institution_data, presentation=output_pptx)
 
 if __name__ == "__main__":
     main()
