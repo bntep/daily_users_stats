@@ -118,8 +118,8 @@ def create_statistique_requete(condition_year: str, type_data: str , condition_l
     END AS code_ou_data \
     FROM statistique_requete as sr LEFT JOIN institution_entity as node \
     ON sr.id_groupe_labo=node.id \
-    WHERE {condition_year} AND  nom_groupe_labo NOT IN ('EUROFIDAI','administrateur Drupal') AND  nom_groupe_labo IS NOT NULL\
-    AND id_utilisateur_drupal NOT IN (1178,1922,367,274) {condition_labo} \
+    WHERE {condition_year} AND  nom_groupe_labo NOT IN ('EUROFIDAI','administrateur Drupal') AND  nom_groupe_labo IS NOT NULL AND node.name IS NOT NULL\
+    AND id_utilisateur_drupal NOT IN (1178,1922,367,274,594,896,904) {condition_labo} \
     ORDER BY year,month,date_heure_extraction,id_utilisateur_drupal,node.name \
     ;"
 
@@ -129,7 +129,7 @@ def create_statistique_requete(condition_year: str, type_data: str , condition_l
 			LEFT OUTER JOIN user__roles AS ur ON ur.entity_id=ufd.uid \
             LEFT OUTER JOIN user__field_institution AS ufi ON ufi.entity_id=ufd.uid \
             LEFT OUTER JOIN institution_entity AS ie ON ie.id=field_institution_target_id \
-            FULL OUTER JOIN user__field_statut AS ufs  ON ufd.uid =ufs.entity_id \
+            FULL OUTER JOIN user__field_statut AS ufs  ON ufd.uid = ufs.entity_id \
             WHERE ufd.uid NOT IN (1178,1922,367,274) AND ie.name NOT IN ('EUROFIDAI','administrateur Drupal', 'probesys2 probesys') AND ie.name IS NOT NULL \
              ORDER BY  ie.name, ufd.uid ;"
 

@@ -26,3 +26,4 @@ src/.setup/config/env_sftp.py
 input_csv/
 resultat/
 src/archives/
+stat_graphs_files/
