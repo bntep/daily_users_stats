@@ -25,6 +25,7 @@ from utils.dbclient.DatabaseClient import DbConnector
 from module.env import *
 os.environ[ 'MPLCONFIGDIR' ] = '/tmp/'
 
+start_time=datetime.datetime.now()
 # Path Definitions
 #HOME = Path(__file__).parent.parent
 HOME = Path("/home/groups/daily/travail/Laura/")
@@ -432,3 +433,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+    end_time=datetime.datetime.now()
+    print(f"\nStart Time: {start_time}\nEnd Time: {end_time}\nDuration: {end_time - start_time}")
