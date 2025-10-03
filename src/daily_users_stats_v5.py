@@ -53,6 +53,11 @@ parser.add_argument('--labo', '-l',
 args = parser.parse_args()
 
 
+#supprime les caractères et les espaces inattendus et met en minuscules tous les noms d'institutions
+def normalize(institution):
+    return str(institution).strip().lower()
+
+
 def create_institution_folder(df_labo: pd.DataFrame):
     """ Create a folder for each laboratory in the result directory
     Args: df_labo (pd.DataFrame): DataFrame containing laboratory data names.
@@ -62,23 +67,22 @@ def create_institution_folder(df_labo: pd.DataFrame):
         CHEMIN_LABO.mkdir(parents=True, exist_ok=True)
 
 
-def get_multiple_locator(number: int) -> int:
+def get_multiple_locator(n: int) -> int:
     """ This function returns the multiple locator for the y-axis based on the number of digits in the number.
     For example, if the number is 1250, it returns 1000, if the number is 158, it returns 100, and so on."""
-    magnitude = 0
-    n = number
+    magnitude = 0   
     multiple = {}
     while n >= 10:
         n //= 10
-        magnitude += 1        
-    
+        magnitude += 1    
+
     multiple = {0:10, 1:10, 2:100, 3:1000, 4:10000, 5:100000,6:1000000,7:10000000,8:100000000,9:1000000000}
     return multiple[magnitude]
 
 
 def create_statistique_requete(condition_year: str, type_data: str , condition_labo: str = "") -> pd.DataFrame:
     """
-    This function creates dataframes for daily users database depending on the type of data requested (laboratory, user, database)
+    This function creates dataframes for daily users database depending on the type of data requested (institution_data, user_data, database_data)
     """
     # Connect to the PostgreSQL database server 
     # Extraction Statistics Dataframe  
@@ -191,12 +195,12 @@ def create_statistique_requete(condition_year: str, type_data: str , condition_l
 
     # Extract formatted month names
     df_stats_daily_users['month_name'] = df_stats_daily_users['date'].dt.strftime('%b%y')  # %b for abbreviated month names (Jan, Feb...)
-   
     df_stats_daily_users.to_csv(str(CHEMIN_RESULTAT / "raw_data_stats_daily_users.csv"), index=False, encoding='utf-8', sep='|')
 
     #stats for all laboratories
     df_all_laboratories = df_stats_daily_users[['year','month','month2','date','month_name','nb_codes','institution_name','user_name']].drop_duplicates(subset=['institution_name','user_name','year','month','month2']).groupby(['year','month','month2']).size().reset_index(name='nb_users')
     df_all_laboratories.sort_values(by=['month'],inplace=True)
+    
     # stats per laboratory
     df_per_laboratory = df_stats_daily_users[['institution_name','year','month','month2','date','month_name','nb_codes']].groupby(['institution_name','year','month2','month','date','month_name']).sum('nb_codes').reset_index()
     df_per_laboratory.sort_values(by=['institution_name','year','month'],inplace=True)
@@ -249,14 +253,6 @@ def create_graph(df: pd.DataFrame, labo_name: str, year: int, x_var: str, y_var:
     ax.set_ylabel(ylabel, fontsize=14, loc='center', fontweight='bold')
     ax.set_title(f"{labo_name}({year})", fontsize=20, fontweight='bold', \
                 backgroundcolor='lightgrey', loc='center', pad=15)
-    
-    # ax.yaxis.set_tick_params(   # y-axis ticks for horizontal chart
-    #     rotation=0,        
-    #     left=True,
-    #     length=0,
-    #     pad=5,
-    # )
-    # ax_left = get_yaxis_width(ax)  # Get y-axis width for tick lines
 
     from matplotlib.ticker import MultipleLocator
     max_value = df[y_var].max()
@@ -324,10 +320,6 @@ def create_seaborn_relplot(df: pd.DataFrame, x_var: str, y_var: str, kind: str =
     plt.title(title, fontsize=20, fontweight='bold', \
                 backgroundcolor='lightgrey', loc='center', pad=15)
 
-    # Set the title if provided
-    # if title:
-    #     g.fig.suptitle(title)
-
     plt.tight_layout()  # Adjust subplot parameters to give specified padding
 
     if save:
@@ -393,9 +385,7 @@ def create_and_save_graph(df_labo: pd.DataFrame, df_user: pd.DataFrame, df_db: p
                 create_graph( df_db_year, labo_name=labo, year=year, x_var='database_name2', y_var='nb_codes', \
             color='deeppink', legend_title ="Number of extracted Eurofidai codes", xlabel="Database", ylabel ="Number of codes" , title=f'{labo}_database_{year}', save=True)                   
             
-#supprime les caractères et les espaces inattendus et met en minuscules tous les noms d'institutions
-def normalize(institution):
-    return str(institution).strip().lower()
+
     
 def extract_data(folder_path, institution_list):
 
@@ -557,8 +547,7 @@ def main():
         df_count_all_labo_users = create_statistique_requete(condition_year, type_data='all', condition_labo="") 
         years = df_count_all_labo_users[['year']].drop_duplicates().sort_values(by='year')['year'].tolist()
     
-    # df_count_all_labo_users = create_statistique_requete(condition_year, type_data='all', condition_labo="") 
-    # print(df_count_all_labo_users.head(10))    
+    # Overall statistics for all laboratories   
    
     if not df_count_all_labo_users.empty:
         create_seaborn_relplot(df_count_all_labo_users, x_var='month2', y_var='nb_users', kind='line', hue ="year", title="Number of Eurofidai's Database Users", legend_labels=years, filename="Number of Eurofidai's Database Users", save=True, height=5, aspect=1.5)
