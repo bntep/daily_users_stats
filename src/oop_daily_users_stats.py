@@ -4,9 +4,9 @@ This script creates statistics for daily users database
 Arguments:  -y or --year : a year or a list of year (optional, default is all years to current year)
             -l or --labo : the name of the laboratory or a list of laboratories separated by ";" (optional, default is all laboratories)
 Example of usage:
-python3 src/daily_users_stats_v3.py -y 2023,2024 -l "IAE Lille"
-python3  src/daily_users_stats_v3.py"
-python3 src/daily_users_stats_v3.py -y 2023,2024 -l "IAE Lille;ESSEC"
+python3 src/oop_daily_users_stats.py -y 2023,2024 -l "IAE Lille"
+python3  oop_daily_users_stats.py
+python3 oop_daily_users_stats.py -y 2023,2024 -l "IAE Lille;ESSEC"
 
 """
 
@@ -497,7 +497,7 @@ class Institution:
         else: 
             raise ValueError("The year parameter must be an integer or a list of integers.")        
 
-
+   
 if __name__ == "__main__": 
 
     start_time=datetime.datetime.now()  
@@ -513,15 +513,18 @@ if __name__ == "__main__":
         for labo in labos:
             c_institution=Institution(name=labo)            
             c_institution.treat_argument_year(args.year, labo)
+            del c_institution
     elif ";" in args.labo:
         labos = args.labo.split(";")   
         for labo in labos:
             c_institution=Institution(name=labo)
-            c_institution.treat_argument_year(args.year, labo)     
+            c_institution.treat_argument_year(args.year, labo)
+            del c_institution     
     elif ";" not in args.labo:
         labo = args.labo
         c_institution=Institution(name=labo)
         c_institution.treat_argument_year(args.year, labo)
+        del c_institution
     else:
         raise ValueError("The labo parameter must be a string or a list of strings separated by ';'.")
                
